@@ -133,6 +133,8 @@ public class ChessMatch {
 		board.placePiece(newPiece, pos);
 		piecesOnTheBoard.add(newPiece);
 		
+		check = (testCheck(opponent(newPiece.getColor()))) ? true : false;
+		
 		return newPiece;
 	}
 	
