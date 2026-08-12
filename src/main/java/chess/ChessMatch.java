@@ -23,19 +23,29 @@ public class ChessMatch {
 	private boolean checkMate;
 	private ChessPiece enPassantVulnerable;
 	private ChessPiece promoted;
+	private GameMode gameMode;
 	
 	private List<Piece> piecesOnTheBoard = new ArrayList<>();
 	private List<Piece> capturedPieces = new ArrayList<>();
 	
 	public ChessMatch() {
+		this(GameMode.TRADITIONAL);
+	}
+	
+	public ChessMatch(GameMode gameMode) {
 		board = new Board(8, 8);
 		turn = 1;
 		currentPlayer = Color.WHITE;
+		this.gameMode = gameMode;
 		initialSetup();
 	}
 	
 	public int getTurn() {
 		return turn;
+	}
+	
+	public GameMode getGameMode() {
+		return gameMode;
 	}
 	
 	public Color getCurrentPlayer() {
@@ -143,6 +153,16 @@ public class ChessMatch {
 		return new Rook(board, color);
 	}
 	
+	/**
+	 * Castling is supported in traditional mode only. The rook-offset math used by
+	 * King and by makeMove/undoMove assumes the standard start square layout, which
+	 * does not hold for a randomized Chess960 back rank. Chess960 castling is
+	 * intentionally out of scope for this feature.
+	 */
+	private boolean castlingEnabled() {
+		return gameMode == GameMode.TRADITIONAL;
+	}
+
 	private Piece makeMove(Position source, Position target) {
 		ChessPiece p = (ChessPiece)board.removePiece(source);
 		p.increaseMoveCount();
@@ -155,7 +175,7 @@ public class ChessMatch {
 		}
 		
 		// #specialmove castling kingside rook
-		if (p instanceof King && target.getColumn() == source.getColumn() + 2) {
+		if (castlingEnabled() && p instanceof King && target.getColumn() == source.getColumn() + 2) {
 			Position sourceT = new Position(source.getRow(), source.getColumn() + 3);
 			Position targetT = new Position(source.getRow(), source.getColumn() + 1);
 			ChessPiece rook = (ChessPiece)board.removePiece(sourceT);
@@ -164,13 +184,13 @@ public class ChessMatch {
 		}
 
 		// #specialmove castling queenside rook
-		if (p instanceof King && target.getColumn() == source.getColumn() - 2) {
+		if (castlingEnabled() && p instanceof King && target.getColumn() == source.getColumn() - 2) {
 			Position sourceT = new Position(source.getRow(), source.getColumn() - 4);
 			Position targetT = new Position(source.getRow(), source.getColumn() - 1);
 			ChessPiece rook = (ChessPiece)board.removePiece(sourceT);
 			board.placePiece(rook, targetT);
 			rook.increaseMoveCount();
-		}		
+		}
 		
 		// #specialmove en passant
 		if (p instanceof Pawn) {
@@ -203,7 +223,7 @@ public class ChessMatch {
 		}
 
 		// #specialmove castling kingside rook
-		if (p instanceof King && target.getColumn() == source.getColumn() + 2) {
+		if (castlingEnabled() && p instanceof King && target.getColumn() == source.getColumn() + 2) {
 			Position sourceT = new Position(source.getRow(), source.getColumn() + 3);
 			Position targetT = new Position(source.getRow(), source.getColumn() + 1);
 			ChessPiece rook = (ChessPiece)board.removePiece(targetT);
@@ -212,7 +232,7 @@ public class ChessMatch {
 		}
 
 		// #specialmove castling queenside rook
-		if (p instanceof King && target.getColumn() == source.getColumn() - 2) {
+		if (castlingEnabled() && p instanceof King && target.getColumn() == source.getColumn() - 2) {
 			Position sourceT = new Position(source.getRow(), source.getColumn() - 4);
 			Position targetT = new Position(source.getRow(), source.getColumn() - 1);
 			ChessPiece rook = (ChessPiece)board.removePiece(targetT);
@@ -316,6 +336,15 @@ public class ChessMatch {
 	}
 	
 	private void initialSetup() {
+		if (gameMode == GameMode.CHESS960) {
+			initialSetupChess960();
+		}
+		else {
+			initialSetupTraditional();
+		}
+	}
+
+	private void initialSetupTraditional() {
         placeNewPiece('a', 1, new Rook(board, Color.WHITE));
         placeNewPiece('b', 1, new Knight(board, Color.WHITE));
         placeNewPiece('c', 1, new Bishop(board, Color.WHITE));
@@ -349,5 +378,32 @@ public class ChessMatch {
         placeNewPiece('f', 7, new Pawn(board, Color.BLACK, this));
         placeNewPiece('g', 7, new Pawn(board, Color.BLACK, this));
         placeNewPiece('h', 7, new Pawn(board, Color.BLACK, this));
+	}
+
+	private void initialSetupChess960() {
+		char[] backRank = Chess960BackRankGenerator.generate();
+
+		for (int i = 0; i < 8; i++) {
+			char column = (char) ('a' + i);
+			placeNewPiece(column, 1, chess960Piece(backRank[i], Color.WHITE));
+			placeNewPiece(column, 2, new Pawn(board, Color.WHITE, this));
+		}
+
+		for (int i = 0; i < 8; i++) {
+			char column = (char) ('a' + i);
+			placeNewPiece(column, 8, chess960Piece(backRank[i], Color.BLACK));
+			placeNewPiece(column, 7, new Pawn(board, Color.BLACK, this));
+		}
+	}
+
+	private ChessPiece chess960Piece(char code, Color color) {
+		switch (code) {
+			case 'K': return new King(board, color, this);
+			case 'Q': return new Queen(board, color);
+			case 'R': return new Rook(board, color);
+			case 'B': return new Bishop(board, color);
+			case 'N': return new Knight(board, color);
+			default: throw new IllegalStateException("Unknown Chess960 piece code: " + code);
+		}
 	}
 }

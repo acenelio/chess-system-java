@@ -5,6 +5,7 @@ import boardgame.Position;
 import chess.ChessMatch;
 import chess.ChessPiece;
 import chess.Color;
+import chess.GameMode;
 
 public class King extends ChessPiece {
 
@@ -85,7 +86,14 @@ public class King extends ChessPiece {
 		}
 
 		// #specialmove castling
-		if (getMoveCount() == 0 && !chessMatch.getCheck()) {
+		//
+		// Castling is only offered in TRADITIONAL mode. The offsets below assume the
+		// standard start (king on e, rooks on a and h), so they are meaningless on a
+		// Chess960 board where the king and rooks sit on random files -- there they
+		// would test the wrong squares and could read off the edge of the board.
+		// Chess960 castling is explicitly out of scope for this feature.
+		if (getMoveCount() == 0 && !chessMatch.getCheck()
+				&& chessMatch.getGameMode() == GameMode.TRADITIONAL) {
 			// #specialmove castling kingside rook
 			Position posT1 = new Position(position.getRow(), position.getColumn() + 3);
 			if (testRookCastling(posT1)) {
