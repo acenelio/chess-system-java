@@ -10,6 +10,7 @@ import chess.ChessMatch;
 import chess.ChessPiece;
 import chess.ChessPosition;
 import chess.Color;
+import chess.GameMode;
 
 public class UI {
 
@@ -40,6 +41,23 @@ public class UI {
 		System.out.flush();
 	}	
 	
+	public static GameMode readGameMode(Scanner sc) {
+		System.out.println("Select game mode:");
+		System.out.println("1 - Traditional Chess");
+		System.out.println("2 - Chess960 (Fischer Random)");
+		System.out.print("Choice: ");
+		while (true) {
+			String input = sc.nextLine().trim();
+			if (input.equals("1")) {
+				return GameMode.TRADITIONAL;
+			}
+			if (input.equals("2")) {
+				return GameMode.CHESS960;
+			}
+			System.out.print("Invalid choice, enter 1 or 2: ");
+		}
+	}
+
 	public static ChessPosition readChessPosition(Scanner sc) {
 		try {
 			String s = sc.nextLine();
